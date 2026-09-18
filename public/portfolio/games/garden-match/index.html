@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>花园连连看</title>
+  <style>
+    :root { --ink:#29394d; --blue:#4a8ec9; --blue-deep:#2d6598; --cream:#fff9e9; --paper:#fffdf5; --orange:#ef8d49; --pink:#e87579; --leaf:#6fab78; --sun:#f4c75e; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); font-family:"Microsoft YaHei", "PingFang SC", sans-serif; background:#d9edf3; overflow-x:hidden; }
+    body::before, body::after { content:""; position:fixed; z-index:-1; border-radius:50%; filter:blur(2px); opacity:.7; }
+    body::before { width:420px; height:420px; background:#f7d58a; top:-190px; left:-110px; }
+    body::after { width:500px; height:380px; background:#a6d5c0; right:-180px; bottom:-180px; }
+    .scene { width:min(1120px, calc(100% - 32px)); margin:24px auto 32px; position:relative; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:18px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand-mark { width:58px; height:58px; display:grid; place-items:center; font-size:31px; background:var(--paper); border:3px solid #fff; border-radius:22px 17px 24px 16px; box-shadow:0 6px 0 rgba(78,116,141,.16); transform:rotate(-4deg); }
+    h1 { font-size:clamp(25px, 4vw, 38px); margin:0; letter-spacing:2px; font-weight:800; color:var(--blue-deep); }
+    .sub { font-size:13px; letter-spacing:1px; font-weight:700; color:#6d8da5; margin-top:3px; }
+    .level-badge { padding:11px 16px; background:#fff2c8; border:2px solid #fff9e4; border-radius:18px 22px 16px 20px; box-shadow:0 5px 0 rgba(121,95,54,.12); color:#95682c; font-weight:800; white-space:nowrap; transform:rotate(2deg); }
+    .play-area { display:grid; grid-template-columns:1fr 265px; gap:18px; align-items:start; }
+    .board-card { position:relative; padding:18px; background:var(--cream); border:6px solid #fffdf4; border-radius:32px 25px 35px 28px; box-shadow:0 10px 0 rgba(70,115,141,.16), inset 0 0 0 2px #e8cfa6; }
+    .board-card::before { content:""; position:absolute; inset:11px; pointer-events:none; border:2px dashed #bfd8d6; border-radius:24px 19px 26px 18px; opacity:.75; }
+    .board-wrap { position:relative; z-index:1; }
+    .board { position:relative; display:grid; grid-template-columns:repeat(10, 1fr); gap:8px; padding:8px; min-height:440px; align-content:center; }
+    .tile { appearance:none; border:0; min-width:0; aspect-ratio:1; position:relative; cursor:pointer; border-radius:18px 15px 19px 14px; background:var(--paper); color:var(--ink); box-shadow:0 4px 0 #d3b98c, 0 6px 12px rgba(93,118,123,.14); transition:transform .15s, box-shadow .15s, opacity .24s; display:grid; place-items:center; font-size:clamp(22px, 4vw, 39px); }
+    .tile:nth-child(3n) { border-radius:14px 20px 16px 19px; } .tile:nth-child(4n) { transform:rotate(1.2deg); }
+    .tile:hover { transform:translateY(-3px) rotate(-1deg); box-shadow:0 7px 0 #d3b98c, 0 10px 16px rgba(93,118,123,.16); }
+    .tile:focus-visible { outline:3px solid var(--orange); outline-offset:3px; }
+    .tile.selected { background:#fff1bd; box-shadow:0 0 0 4px #ed9a54, 0 5px 0 #c47a3d; transform:translateY(-4px) rotate(-2deg); }
+    .tile.matched { visibility:hidden; pointer-events:none; transform:scale(.2) rotate(20deg); opacity:0; }
+    #path-layer { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; z-index:4; }
+    .guide { position:absolute; right:30px; top:12px; color:#80aeb5; font-size:13px; font-weight:700; transform:rotate(2deg); }
+    .side { display:grid; gap:14px; }
+    .info, .tip { padding:18px; background:var(--paper); border:3px solid #fff; border-radius:23px 18px 22px 16px; box-shadow:0 6px 0 rgba(71,107,126,.14); }
+    .info h2, .tip h2 { font-size:15px; margin:0 0 13px; color:#63839c; letter-spacing:1px; }
+    .time-row { display:flex; justify-content:space-between; align-items:baseline; color:#56758d; font-weight:700; }
+    #time { font-size:32px; font-weight:900; color:var(--blue-deep); letter-spacing:1px; }
+    .bar { height:13px; border-radius:999px; background:#e0eff0; overflow:hidden; margin-top:10px; }
+    #timebar { height:100%; width:100%; background:linear-gradient(90deg, #72c4af, #f6c96a); border-radius:inherit; transition:width .4s linear, background .3s; }
+    .score { display:flex; justify-content:space-between; margin-top:15px; padding-top:14px; border-top:2px dashed #d9e6df; font-weight:700; color:#6e8695; }
+    #pairs { color:var(--pink); font-size:20px; }
+    .actions { display:grid; gap:10px; }
+    button.action { cursor:pointer; border:0; padding:13px 14px; border-radius:16px 19px 15px 18px; font:800 15px "Microsoft YaHei",sans-serif; color:white; box-shadow:0 4px 0 rgba(70,88,92,.2); transition:transform .15s, box-shadow .15s; }
+    button.action:hover { transform:translateY(-2px); box-shadow:0 6px 0 rgba(70,88,92,.18); }
+    .hint { background:var(--orange); } .restart { background:var(--blue); }
+    .tip { background:#eff8f0; transform:rotate(-1deg); }
+    .tip p { margin:0; color:#668276; line-height:1.7; font-size:14px; font-weight:600; }
+    .flower { position:absolute; font-size:34px; filter:drop-shadow(0 3px 0 rgba(75,113,105,.1)); } .f1 { top:125px; left:-25px; } .f2 { right:-20px; bottom:-15px; } .f3 { left:26%; bottom:-42px; }
+    .toast { position:fixed; left:50%; top:25px; z-index:10; transform:translate(-50%,-120px); background:#406f8c; color:white; padding:12px 20px; border-radius:18px; font-weight:700; box-shadow:0 5px 0 rgba(0,0,0,.13); transition:transform .28s ease; } .toast.show { transform:translate(-50%,0); }
+    .overlay { position:fixed; inset:0; z-index:20; background:rgba(37,76,99,.42); display:none; place-items:center; padding:20px; backdrop-filter:blur(3px); } .overlay.show { display:grid; }
+    .modal { width:min(390px,100%); text-align:center; padding:34px 30px 28px; background:var(--cream); border:6px solid #fffdf4; border-radius:35px 27px 37px 25px; box-shadow:0 12px 0 rgba(35,69,86,.2); } .modal .big { font-size:66px; } .modal h2 { margin:10px 0 6px; color:var(--blue-deep); font-size:29px; } .modal p { color:#698396; font-weight:700; } .modal .action { width:100%; margin-top:12px; background:var(--orange); }
+    @media (max-width:830px) { .play-area{grid-template-columns:1fr}.side{grid-template-columns:repeat(3,1fr)}.actions{grid-template-columns:1fr 1fr}.tip{grid-column:span 3}.board{min-height:0}.guide{display:none} }
+    @media (max-width:580px) { .scene{width:min(100% - 18px,1120px);margin-top:12px}.top{align-items:flex-start}.level-badge{font-size:12px;padding:9px}.brand-mark{width:48px;height:48px;font-size:25px}.board-card{padding:9px;border-width:4px}.board{gap:5px;padding:5px}.tile{border-radius:11px 9px 12px 8px;box-shadow:0 3px 0 #d3b98c;font-size:23px}.side{grid-template-columns:1fr 1fr}.info{grid-column:span 2}.tip{grid-column:span 2}.flower{display:none} }
+  </style>
+</head>
+<body>
+  <main class="scene">
+    <header class="top"><div class="brand"><div class="brand-mark">🌼</div><div><h1>花园连连看</h1><div class="sub">找到花园里成对的小伙伴</div></div></div><div class="level-badge">第 1 关 · 晴天花园</div></header>
+    <div class="play-area">
+      <section class="board-card" aria-label="连连看棋盘"><div class="guide">同图案可用不超过两次转弯的线相连</div><div class="board-wrap"><svg id="path-layer" aria-hidden="true"></svg><div id="board" class="board"></div></div></section>
+      <aside class="side">
+        <section class="info"><h2>花园时钟</h2><div class="time-row"><span>剩余时间</span><span id="time">02:30</span></div><div class="bar"><div id="timebar"></div></div><div class="score"><span>还剩配对</span><strong id="pairs">20 对</strong></div></section>
+        <div class="actions"><button class="action hint" id="hintBtn">✨ 给我提示</button><button class="action restart" id="restartBtn">↻ 重新布置</button></div>
+        <section class="tip"><h2>小园丁提示</h2><p>先找外圈的图案，更容易找到一条畅通的小路哦！</p></section>
+      </aside>
+    </div>
+    <span class="flower f1">🌷</span><span class="flower f2">🌻</span><span class="flower f3">🍃</span>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="overlay" class="overlay"><section class="modal"><div class="big" id="modalIcon">🏆</div><h2 id="modalTitle">花园清空啦！</h2><p id="modalText">你真是最棒的小园丁！</p><button id="againBtn" class="action">再玩一次</button></section></div>
+  <script>
+    const icons=['🍎','🍓','🍋','🍇','🍉','🥕','🌽','🍄','🌷','🌻','🌵','🦋','🐞','🐝','🐸','🐰','🐥','🐢','🐱','🐶'];
+    const board=document.getElementById('board'), pathLayer=document.getElementById('path-layer');
+    const timeText=document.getElementById('time'), timeBar=document.getElementById('timebar'), pairsText=document.getElementById('pairs');
+    const toast=document.getElementById('toast'), overlay=document.getElementById('overlay');
+    let cells=[], first=null, remaining=20, seconds=150, timer=null, locked=false;
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+    function setup(){ clearInterval(timer); board.innerHTML=''; pathLayer.innerHTML=''; first=null; remaining=20; seconds=150; locked=false; cells=shuffle([...icons,...icons]).map((icon,index)=>({icon,index,matched:false})); cells.forEach((cell,index)=>{const btn=document.createElement('button');btn.className='tile';btn.dataset.index=index;btn.setAttribute('aria-label',iconName(cell.icon));btn.textContent=cell.icon;btn.addEventListener('click',()=>pick(index));board.appendChild(btn)}); ensurePlayable(); updateHud(); timer=setInterval(tick,1000); }
+    function iconName(icon){return '图案 '+icon}
+    function tick(){seconds--;updateHud();if(seconds<=0){clearInterval(timer);end(false)}}
+    function updateHud(){const m=Math.max(0,Math.floor(seconds/60)),s=Math.max(0,seconds%60);timeText.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');timeBar.style.width=(seconds/150*100)+'%';timeBar.style.background=seconds<35?'#e87579':'linear-gradient(90deg,#72c4af,#f6c96a)';pairsText.textContent=remaining+' 对'}
+    function pick(index){if(locked||cells[index].matched)return; const tile=tileAt(index); if(first===null){first=index;tile.classList.add('selected');return} if(first===index)return; const chosen=first; tileAt(chosen).classList.remove('selected'); first=null; if(cells[chosen].icon!==cells[index].icon){flash('这两张不一样，再找找看！');return} const path=findPath(chosen,index); if(!path){flash('小路被挡住啦，换一对试试！');return} locked=true; drawPath(path); setTimeout(()=>{cells[chosen].matched=cells[index].matched=true;tileAt(chosen).classList.add('matched');tile.classList.add('matched');pathLayer.innerHTML='';remaining--;updateHud();locked=false;if(remaining===0){clearInterval(timer);end(true)}else if(!findHint()){ensurePlayable();flash('花园小路换了个方向，继续吧！')}},1050)}
+    function tileAt(i){return board.querySelector(`[data-index="${i}"]`)}
+    // 10×4 game cells, enclosed by an empty border. A valid route has at most two corners.
+    function pos(i){return {r:Math.floor(i/10)+1,c:i%10+1}}
+    function empty(r,c,a,b){if(r<0||r>5||c<0||c>11)return false;if(r===0||r===5||c===0||c===11)return true;const i=(r-1)*10+c-1;return i===a||i===b||cells[i].matched}
+    function clearLine(p,q,a,b){if(p.r===q.r){let st=Math.min(p.c,q.c)+1,en=Math.max(p.c,q.c);for(let c=st;c<en;c++)if(!empty(p.r,c,a,b))return false;return true}if(p.c===q.c){let st=Math.min(p.r,q.r)+1,en=Math.max(p.r,q.r);for(let r=st;r<en;r++)if(!empty(r,p.c,a,b))return false;return true}return false}
+    function findPath(a,b){const A=pos(a),B=pos(b);if(clearLine(A,B,a,b))return[A,B];for(let r=0;r<=5;r++)for(let c=0;c<=11;c++){const p={r,c};if(empty(r,c,a,b)&&clearLine(A,p,a,b)&&clearLine(p,B,a,b))return[A,p,B]}for(let r=0;r<=5;r++)for(let c=0;c<=11;c++){const p={r,c};if(!empty(r,c,a,b)||!clearLine(A,p,a,b))continue;for(let rr=0;rr<=5;rr++)for(let cc=0;cc<=11;cc++){const q={r:rr,c:cc};if(empty(rr,cc,a,b)&&clearLine(p,q,a,b)&&clearLine(q,B,a,b))return[A,p,q,B]}}return null}
+    function drawPath(path){
+      const rect=board.getBoundingClientRect(), style=getComputedStyle(board);
+      const padLeft=parseFloat(style.paddingLeft), padTop=parseFloat(style.paddingTop);
+      const padRight=parseFloat(style.paddingRight), padBottom=parseFloat(style.paddingBottom);
+      const gapX=parseFloat(style.columnGap), gapY=parseFloat(style.rowGap);
+      const cellW=(board.clientWidth-padLeft-padRight-gapX*9)/10;
+      const cellH=(board.clientHeight-padTop-padBottom-gapY*3)/4;
+      const x0=padLeft+cellW/2, y0=padTop+cellH/2;
+      const dx=cellW+gapX, dy=cellH+gapY;
+      pathLayer.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`); pathLayer.setAttribute('width',rect.width); pathLayer.setAttribute('height',rect.height);
+      const d=path.map((p,i)=>`${i?'L':'M'} ${x0+(p.c-1)*dx} ${y0+(p.r-1)*dy}`).join(' ');
+      pathLayer.innerHTML=`<path d="${d}" fill="none" stroke="#d95d38" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/><path d="${d}" fill="none" stroke="#f19b45" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#fff9d8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    function findHint(){for(let a=0;a<cells.length;a++){if(cells[a].matched)continue;for(let b=a+1;b<cells.length;b++)if(!cells[b].matched&&cells[a].icon===cells[b].icon){const path=findPath(a,b);if(path)return[a,b,path]}}return null}
+    function ensurePlayable(){
+      let attempts=0;
+      while(!findHint() && attempts++<60){
+        const loose=shuffle(cells.filter(c=>!c.matched).map(c=>c.icon));
+        let n=0;
+        cells.forEach((c,i)=>{
+          if(!c.matched){
+            c.icon=loose[n++];
+            const t=tileAt(i);
+            if(t){ t.textContent=c.icon; t.setAttribute('aria-label',iconName(c.icon)); }
+          }
+        });
+      }
+    }
+    function flash(text){toast.textContent=text;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1700)}
+    function end(win){document.getElementById('modalIcon').textContent=win?'🏆':'⏳';document.getElementById('modalTitle').textContent=win?'花园清空啦！':'时间到！';document.getElementById('modalText').textContent=win?`还剩 ${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}，你真是最棒的小园丁！`:'别着急，重新挑战一次吧！';overlay.classList.add('show')}
+    document.getElementById('hintBtn').addEventListener('click',()=>{if(locked)return;const h=findHint();if(!h){flash('现在没有可消除的一对，试试重新布置！');return}const [a,b,path]=h;locked=true;tileAt(a).classList.add('selected');tileAt(b).classList.add('selected');drawPath(path);flash('看，橙色小路就是答案！');setTimeout(()=>{tileAt(a).classList.remove('selected');tileAt(b).classList.remove('selected');pathLayer.innerHTML='';locked=false},1600)});
+    document.getElementById('restartBtn').addEventListener('click',()=>{setup();flash('花园已经重新布置好啦！')});document.getElementById('againBtn').addEventListener('click',()=>{overlay.classList.remove('show');setup()});window.addEventListener('resize',()=>pathLayer.innerHTML='');setup();
+  </script>
+</body>
+</html>

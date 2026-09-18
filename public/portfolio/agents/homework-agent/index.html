@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2b6ec7" />
+  <meta name="description" content="面向学生自学的作业辅导助手：找出卡点，分层讲清题目、图片和代码。" />
+  <title>作业辅导助手 · 像素学习站</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./state.js" defer></script>
+  <script src="./attachments.js" defer></script>
+  <script src="./render.js" defer></script>
+  <script src="./video-library.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#question">跳到问题输入框</a>
+  <button id="drawer-backdrop" class="drawer-backdrop" aria-label="关闭历史记录" hidden></button>
+  <aside id="sidebar" class="sidebar" aria-label="会话历史">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">学</span><div><strong>像素学习站</strong><small>每一道题，都可以慢慢弄懂</small></div><button id="close-drawer" class="icon-button mobile-only" aria-label="关闭历史记录">×</button></div>
+    <button id="new-chat" class="new-chat"><span aria-hidden="true">＋</span> 新建会话 <span class="new-arrow" aria-hidden="true">↗</span></button>
+    <div class="history-heading"><h2>我的学习记录</h2><span id="history-count">0</span></div>
+    <button id="manage-videos" class="text-button video-manager-button" type="button">管理精选视频</button>
+    <nav id="history-list" class="history-list" aria-label="选择会话"></nav>
+    <div class="sidebar-note"><span class="note-line" aria-hidden="true"></span><p>把复杂的问题，<br />变成自己的清晰思路。</p><small>记录仅保存在当前浏览器</small></div>
+    <div class="profile"><span class="profile-avatar" aria-hidden="true">学</span><div><strong>我的学习空间</strong><small>安心提问 · 慢慢弄懂</small></div><span class="profile-dot" aria-hidden="true"></span></div>
+  </aside>
+  <main id="workspace" class="workspace">
+    <header class="topbar"><div class="topbar-left"><button id="open-drawer" class="icon-button mobile-only" aria-label="打开历史记录" aria-expanded="false" aria-controls="sidebar">☰</button><div><h1 id="session-title">新的学习问题</h1><p id="session-subtitle">把题目一步一步弄懂</p></div></div><span class="workspace-tag">像素学习站 <span aria-hidden="true">✦</span></span></header>
+    <p id="storage-warning" class="storage-warning" role="alert" hidden></p>
+    <div id="conversation-scroll" class="conversation-scroll" tabindex="0" aria-label="对话阅读区">
+      <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+        <div class="welcome-copy">
+          <p class="eyebrow">像素学习站 · 自学陪伴</p>
+          <h2 id="welcome-title">你好，今天想一起解决什么？</h2>
+          <p class="welcome-description">把题目、我的答案或截图放进来。<br class="mobile-only" />先找出卡点，再把思路一步一步讲清楚。</p>
+        </div>
+        <div class="welcome-illustration" aria-hidden="true">
+          <span class="pixel-spark spark-one">+</span>
+          <span class="pixel-spark spark-two">×</span>
+          <span class="pixel-block block-one"></span>
+          <img src="./assets/study-fox-pixel.png" alt="" />
+        </div>
+      </section>
+      <section id="conversation" class="conversation" aria-label="当前会话"></section>
+    </div>
+    <div class="composer-area">
+      <form id="chat-form" class="composer">
+        <label for="question" class="sr-only">题目或追问</label><textarea id="question" rows="2" placeholder="写下题目、代码或学习中的疑问…" maxlength="30000"></textarea>
+        <div id="answer-field" class="answer-field"><label for="student-answer">我的答案 <span>选填，也可以写下自己的思路</span></label><textarea id="student-answer" rows="2" placeholder="写下你的答案或思路，我会和正确思路一起对照…" maxlength="30000"></textarea></div>
+        <div id="image-attachments" class="image-attachments" aria-live="polite"></div>
+        <div class="composer-footer"><span id="input-hint">Enter 换行 · Ctrl / ⌘ + Enter 发送</span><div class="composer-actions"><label for="image-input" class="attach-button" title="添加题目或答案图片">＋ 图片</label><input id="image-input" type="file" accept="image/jpeg,image/png,image/webp,image/bmp" multiple hidden /><button type="submit" id="submit-button" class="send-button">发送问题 <span aria-hidden="true">↑</span></button></div></div>
+      </form>
+      <p class="footer-note">帮助你理清思路；重要结论可以再用题目条件核对。</p>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="session-dialog" aria-labelledby="dialog-title"><form method="dialog" id="dialog-form"><h2 id="dialog-title">重命名会话</h2><p id="dialog-description"></p><label id="rename-label" for="rename-input">会话名称</label><input id="rename-input" maxlength="60" autocomplete="off" /><div class="dialog-actions"><button value="cancel" class="secondary-button" formnovalidate>取消</button><button id="dialog-confirm" value="confirm" class="send-button">保存</button></div></form></dialog>
+  <dialog id="video-manager-dialog" class="video-manager-dialog" aria-labelledby="video-manager-title">
+    <div class="video-dialog-header"><div><p class="video-dialog-kicker">本机配置</p><h2 id="video-manager-title">管理精选视频</h2><p>只保存 B 站和抖音的完整原视频链接。</p></div><button id="close-video-manager" class="icon-button" type="button" aria-label="关闭视频管理">×</button></div>
+    <form id="video-form" class="video-form"><input id="video-edit-id" type="hidden" /><label>原视频链接<input id="video-url" type="url" placeholder="https://www.bilibili.com/video/BV..." required /></label><div class="video-form-grid"><label>视频标题<input id="video-title" maxlength="180" required /></label><label>知识点<input id="video-topic" maxlength="120" required /></label><label>年级/难度<input id="video-level" maxlength="80" required /></label><label>时长<input id="video-duration" maxlength="40" placeholder="例如 08:30" required /></label></div><label>关键词（用逗号分隔）<input id="video-keywords" maxlength="400" /></label><div class="dialog-actions"><button id="video-form-cancel" class="secondary-button" type="button">取消编辑</button><button class="send-button" type="submit">保存视频</button></div></form>
+    <p id="video-manager-message" class="video-manager-message" role="status"></p><div id="video-manager-list" class="video-manager-list"></div>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090814">
+  <title>霓虹三合</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="masthead">
+      <div>
+        <p class="kicker">NEON TRIAD // PUZZLE GRID</p>
+        <h1>霓虹三合</h1>
+        <p class="subtitle">一步一格，合成更大的数字</p>
+      </div>
+      <div class="scoreboard" aria-label="得分面板">
+        <div class="score-box"><span>本局</span><strong id="score">0</strong></div>
+        <div class="score-box"><span>最高</span><strong id="best-score">0</strong></div>
+      </div>
+    </header>
+
+    <section class="controls" aria-label="游戏控制">
+      <div class="next-tile">
+        <span>下一块</span>
+        <div id="next-value" class="next-value" aria-label="下一块数字">1</div>
+      </div>
+      <button id="new-game" class="new-game" type="button">重开矩阵</button>
+    </section>
+
+    <section id="game-wrap" class="game-wrap" aria-label="霓虹三合棋盘">
+      <div id="grid" class="grid" role="grid" aria-label="4乘4数字棋盘"></div>
+      <div id="game-message" class="game-message" hidden>
+        <p>矩阵已满</p>
+        <span>试试规划下一次 1 与 2 的相遇</span>
+        <button id="retry" type="button">再开一局</button>
+      </div>
+    </section>
+
+    <section class="how-to">
+      <h2>合成规则</h2>
+      <div class="rule-list">
+        <p><b>1 + 2</b><span>合成 3</span></p>
+        <p><b>3 + 3</b><span>合成 6</span></p>
+        <p><b>6 + 6</b><span>继续翻倍</span></p>
+      </div>
+      <p class="hint">使用方向键 / WASD 或在棋盘上滑动。每次滑动，方块最多只移动一格；新方块会从反方向进入。</p>
+    </section>
+
+    <p class="attribution">原创界面与实现，玩法机制受数字滑动益智游戏启发。</p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

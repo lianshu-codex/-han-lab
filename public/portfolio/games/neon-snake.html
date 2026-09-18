@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050510">
+  <title>NEON SERPENT // 霓虹贪吃蛇</title>
+  <style>
+    :root {
+      --cyan: #00f6ff;
+      --pink: #ff2bd6;
+      --lime: #b6ff35;
+      --ink: #03030a;
+      --panel: rgba(8, 9, 28, .82);
+      --muted: #777c9d;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      padding: 22px;
+      color: #f5f7ff;
+      background:
+        radial-gradient(circle at 14% 7%, rgba(255, 43, 214, .18), transparent 29%),
+        radial-gradient(circle at 84% 89%, rgba(0, 246, 255, .15), transparent 35%),
+        linear-gradient(145deg, #09091b, var(--ink) 56%, #080315);
+      font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      user-select: none;
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      content: "";
+      opacity: .43;
+      background-image:
+        linear-gradient(rgba(0, 246, 255, .065) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 246, 255, .065) 1px, transparent 1px);
+      background-size: 54px 54px;
+      transform: perspective(520px) rotateX(58deg) scale(1.55) translateY(25%);
+      transform-origin: center bottom;
+      animation: grid-drift 16s linear infinite;
+    }
+
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      content: "";
+      opacity: .2;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,.026) 0,
+        rgba(255,255,255,.026) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+      mix-blend-mode: screen;
+    }
+
+    @keyframes grid-drift { to { background-position: 0 54px, 54px 0; } }
+    @keyframes blink { 50% { opacity: .22; } }
+    @keyframes glitch-a {
+      0%, 88%, 100% { transform: translate(0); clip-path: inset(0); }
+      90% { transform: translate(-3px, 1px); clip-path: inset(12% 0 58%); }
+      94% { transform: translate(4px, -1px); clip-path: inset(62% 0 8%); }
+    }
+    @keyframes glitch-b {
+      0%, 90%, 100% { transform: translate(0); clip-path: inset(0); }
+      92% { transform: translate(3px, -1px); clip-path: inset(48% 0 30%); }
+      96% { transform: translate(-4px, 1px); clip-path: inset(76% 0 4%); }
+    }
+
+    .app { width: min(95vw, 760px); }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 3px 14px;
+    }
+
+    .brand {
+      position: relative;
+      margin: 0;
+      color: white;
+      font: italic 900 clamp(24px, 5.8vw, 44px)/.9 Consolas, "Courier New", monospace;
+      letter-spacing: -.07em;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(0,246,255,.65);
+    }
+
+    .brand::before, .brand::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      content: attr(data-text);
+      pointer-events: none;
+    }
+    .brand::before { color: var(--pink); animation: glitch-a 3.7s infinite; }
+    .brand::after { z-index: -2; color: var(--cyan); animation: glitch-b 4.1s infinite; }
+
+    .brand span {
+      display: block;
+      margin-top: 8px;
+      color: var(--cyan);
+      font-size: 10px;
+      font-style: normal;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: .42em;
+      text-shadow: 0 0 8px var(--cyan);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding-bottom: 2px;
+      color: var(--muted);
+      font: 10px/1 Consolas, monospace;
+      letter-spacing: .16em;
+    }
+
+    .status i {
+      width: 7px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 10px var(--lime);
+      animation: blink 1.5s steps(2) infinite;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .hud-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 64px;
+      padding: 11px 14px 9px;
+      border: 1px solid rgba(0,246,255,.22);
+      background: linear-gradient(135deg, rgba(0,246,255,.07), var(--panel));
+      clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+    }
+
+    .hud-card:nth-child(2) {
+      border-color: rgba(255,43,214,.28);
+      background: linear-gradient(135deg, rgba(255,43,214,.08), var(--panel));
+    }
+
+    .hud-card::after {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 24px;
+      height: 2px;
+      content: "";
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .hud-card:nth-child(2)::after {
+      background: var(--pink);
+      box-shadow: 0 0 8px var(--pink);
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font: 600 9px/1 Consolas, monospace;
+      letter-spacing: .2em;
+    }
+
+    .value {
+      color: white;
+      font: 700 24px/1 Consolas, monospace;
+      text-shadow: 0 0 10px rgba(255,255,255,.35);
+    }
+
+    .game-shell {
+      position: relative;
+      padding: 7px;
+      border: 1px solid rgba(0,246,255,.45);
+      background: rgba(1,2,11,.9);
+      box-shadow: 0 0 28px rgba(0,246,255,.09), inset 0 0 26px rgba(0,246,255,.04);
+      clip-path: polygon(0 16px, 16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+    }
+
+    .game-shell::before, .game-shell::after {
+      position: absolute;
+      z-index: 5;
+      height: 2px;
+      content: "";
+      pointer-events: none;
+    }
+    .game-shell::before {
+      top: 3px;
+      left: 18px;
+      width: 70px;
+      background: var(--pink);
+      box-shadow: 0 0 9px var(--pink);
+    }
+    .game-shell::after {
+      right: 17px;
+      bottom: 3px;
+      width: 120px;
+      background: var(--cyan);
+      box-shadow: 0 0 9px var(--cyan);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      background: #03040d;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 7px;
+      z-index: 4;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      text-align: center;
+      background: rgba(3,3,13,.72);
+      backdrop-filter: blur(3px);
+      transition: opacity .18s ease, visibility .18s ease;
+    }
+    .overlay.hidden { visibility: hidden; opacity: 0; pointer-events: none; }
+    .overlay-content { width: min(100%, 430px); }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--pink);
+      font: 700 10px/1 Consolas, monospace;
+      letter-spacing: .34em;
+      text-transform: uppercase;
+      text-shadow: 0 0 8px var(--pink);
+    }
+
+    .overlay h2 {
+      margin: 0;
+      color: white;
+      font: 900 clamp(33px,9vw,68px)/.95 Consolas, monospace;
+      letter-spacing: -.08em;
+      text-transform: uppercase;
+      text-shadow: 3px 0 var(--pink), -3px 0 var(--cyan), 0 0 22px rgba(255,255,255,.32);
+    }
+
+    .overlay p:not(.eyebrow) {
+      max-width: 370px;
+      margin: 18px auto 22px;
+      color: #a1a5bf;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .button {
+      min-width: 180px;
+      padding: 13px 22px;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      background: rgba(0,246,255,.06);
+      box-shadow: 0 0 17px rgba(0,246,255,.15), inset 0 0 12px rgba(0,246,255,.07);
+      clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px));
+      cursor: pointer;
+      font: 700 12px/1 Consolas, monospace;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      transition: .14s ease;
+    }
+
+    .button:hover, .button:focus-visible {
+      color: #02060b;
+      outline: none;
+      background: var(--cyan);
+      box-shadow: 0 0 26px rgba(0,246,255,.62);
+    }
+    .button:active { transform: translateY(1px); }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 32px;
+      padding: 8px 4px 0;
+      color: #626681;
+      font: 9px/1.4 Consolas, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .footer strong { color: #a1a5c6; font-weight: 600; }
+
+    .sound-toggle {
+      border: 0;
+      padding: 3px 0;
+      color: #747997;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+      letter-spacing: inherit;
+    }
+    .sound-toggle:hover, .sound-toggle:focus-visible { color: var(--cyan); outline: none; }
+
+    .controls {
+      display: none;
+      grid-template-columns: repeat(3, 54px);
+      grid-template-rows: repeat(2, 48px);
+      justify-content: center;
+      gap: 7px;
+      padding-top: 14px;
+    }
+
+    .control {
+      border: 1px solid rgba(0,246,255,.35);
+      border-radius: 4px;
+      color: var(--cyan);
+      background: rgba(0,246,255,.06);
+      box-shadow: inset 0 0 12px rgba(0,246,255,.04);
+      font-size: 19px;
+      touch-action: manipulation;
+    }
+    .control:active { color: #02060b; background: var(--cyan); }
+    .control[data-dir="up"] { grid-column: 2; }
+    .control[data-dir="left"] { grid-column: 1; grid-row: 2; }
+    .control[data-dir="down"] { grid-column: 2; grid-row: 2; }
+    .control[data-dir="right"] { grid-column: 3; grid-row: 2; }
+
+    @media (pointer: coarse), (max-width: 640px) {
+      body { place-items: start center; padding: 14px 10px 20px; }
+      .app { width: min(100%, 600px); }
+      .status { display: none; }
+      .hud-card { min-height: 55px; padding: 9px 10px 7px; }
+      .value { font-size: 20px; }
+      .controls { display: grid; }
+      .footer { justify-content: center; }
+      .footer > span { display: none; }
+    }
+
+    @media (max-height: 760px) and (min-width: 641px) {
+      body { padding-block: 10px; }
+      .app { width: min(78vh, 720px); }
+      .topbar { margin-bottom: 8px; }
+      .hud { margin-bottom: 6px; }
+      .hud-card { min-height: 52px; padding-block: 7px; }
+      .value { font-size: 20px; }
+      .footer { min-height: 22px; padding-top: 5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="赛博朋克贪吃蛇游戏">
+    <header class="topbar">
+      <h1 class="brand" data-text="NEON SERPENT">
+        NEON SERPENT
+        <span>蛇形协议 // V.2077</span>
+      </h1>
+      <div class="status"><i></i>SYSTEM ONLINE</div>
+    </header>
+
+    <section class="hud" aria-label="游戏数据">
+      <div class="hud-card"><span class="label">SCORE // 得分</span><span class="value" id="score">0000</span></div>
+      <div class="hud-card"><span class="label">HIGH // 最高</span><span class="value" id="high-score">0000</span></div>
+      <div class="hud-card"><span class="label">LEVEL // 等级</span><span class="value" id="level">01</span></div>
+    </section>
+
+    <section class="game-shell">
+      <canvas id="game" width="720" height="720" aria-label="贪吃蛇游戏区域"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="overlay-content">
+          <p class="eyebrow" id="overlay-tag">NIGHT CITY ARCADE</p>
+          <h2 id="overlay-title">SYSTEM<br>READY</h2>
+          <p id="overlay-copy">入侵数据网格，吞噬能量核心。使用方向键或 WASD 控制，按空格键暂停。</p>
+          <button class="button" id="start-button" type="button">进军</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls" aria-label="触屏方向控制">
+      <button class="control" data-dir="up" aria-label="向上" type="button">▲</button>
+      <button class="control" data-dir="left" aria-label="向左" type="button">◀</button>
+      <button class="control" data-dir="down" aria-label="向下" type="button">▼</button>
+      <button class="control" data-dir="right" aria-label="向右" type="button">▶</button>
+    </div>
+
+    <footer class="footer">
+      <span><strong>MOVE</strong> // ARROWS · WASD &nbsp;&nbsp; <strong>PAUSE</strong> // SPACE</span>
+      <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="true">AUDIO // ON</button>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.querySelector("#game");
+      const ctx = canvas.getContext("2d");
+      const scoreNode = document.querySelector("#score");
+      const highNode = document.querySelector("#high-score");
+      const levelNode = document.querySelector("#level");
+      const overlay = document.querySelector("#overlay");
+      const overlayTag = document.querySelector("#overlay-tag");
+      const overlayTitle = document.querySelector("#overlay-title");
+      const overlayCopy = document.querySelector("#overlay-copy");
+      const startButton = document.querySelector("#start-button");
+      const soundButton = document.querySelector("#sound-toggle");
+
+      const CELLS = 24;
+      const BASE_DELAY = 128;
+      const MIN_DELAY = 58;
+      const SAVE_KEY = "neon-serpent-high-score";
+      const CYAN = "#00f6ff";
+      const PINK = "#ff2bd6";
+      const LIME = "#b6ff35";
+
+      let snake = [];
+      let food = { x: 17, y: 12 };
+      let direction = { x: 1, y: 0 };
+      let nextDirection = { x: 1, y: 0 };
+      let score = 0;
+      let level = 1;
+      let highScore = loadHighScore();
+      let state = "idle";
+      let lastTime = performance.now();
+      let accumulator = 0;
+      let particles = [];
+      let shake = 0;
+      let soundOn = true;
+      let audioContext = null;
+      let swipeStart = null;
+
+      function loadHighScore() {
+        try { return Math.max(0, Number.parseInt(localStorage.getItem(SAVE_KEY), 10) || 0); }
+        catch { return 0; }
+      }
+
+      function saveHighScore() {
+        try { localStorage.setItem(SAVE_KEY, String(highScore)); }
+        catch { /* Storage is optional. */ }
+      }
+
+      const padded = value => String(value).padStart(4, "0");
+
+      function updateHud() {
+        scoreNode.textContent = padded(score);
+        highNode.textContent = padded(highScore);
+        levelNode.textContent = String(level).padStart(2, "0");
+      }
+
+      function reset() {
+        snake = [
+          { x: 9, y: 12 },
+          { x: 8, y: 12 },
+          { x: 7, y: 12 },
+          { x: 6, y: 12 }
+        ];
+        direction = { x: 1, y: 0 };
+        nextDirection = { x: 1, y: 0 };
+        score = 0;
+        level = 1;
+        particles = [];
+        shake = 0;
+        placeFood();
+        updateHud();
+      }
+
+      function start() {
+        initAudio();
+        reset();
+        state = "playing";
+        accumulator = 0;
+        lastTime = performance.now();
+        overlay.classList.add("hidden");
+        tone(170, 260, .08, "sawtooth", .035);
+      }
+
+      function showOverlay(tag, title, copy, buttonText) {
+        overlayTag.textContent = tag;
+        overlayTitle.innerHTML = title;
+        overlayCopy.textContent = copy;
+        startButton.textContent = buttonText;
+        overlay.classList.remove("hidden");
+      }
+
+      function togglePause() {
+        if (state === "playing") {
+          state = "paused";
+          showOverlay("CONNECTION SUSPENDED", "PAUSED", "信号已冻结。按空格键或点击按钮继续连接。", "继续协议");
+        } else if (state === "paused") {
+          state = "playing";
+          accumulator = 0;
+          lastTime = performance.now();
+          overlay.classList.add("hidden");
+          tone(260, 340, .06, "square", .025);
+        }
+      }
+
+      function endGame() {
+        state = "over";
+        shake = 14;
+        burst(snake[0].x, snake[0].y, PINK, 38);
+        tone(150, 48, .34, "sawtooth", .055);
+        showOverlay(
+          "SIGNAL TERMINATED",
+          "FLATLINED",
+          `最终得分 ${padded(score)}。神经链路已断开，重新启动协议再来一次。`,
+          "重新连接"
+        );
+      }
+
+      function placeFood() {
+        const open = [];
+        for (let y = 0; y < CELLS; y += 1) {
+          for (let x = 0; x < CELLS; x += 1) {
+            if (!snake.some(part => part.x === x && part.y === y)) open.push({ x, y });
+          }
+        }
+        if (open.length) food = open[Math.floor(Math.random() * open.length)];
+      }
+
+      function setDirection(x, y) {
+        if (state !== "playing") return;
+        if (x + direction.x === 0 && y + direction.y === 0) return;
+        nextDirection = { x, y };
+      }
+
+      function step() {
+        direction = nextDirection;
+        const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+        const outside = head.x < 0 || head.y < 0 || head.x >= CELLS || head.y >= CELLS;
+        const eating = head.x === food.x && head.y === food.y;
+        const collisionBody = eating ? snake : snake.slice(0, -1);
+        const hitSelf = collisionBody.some(part => part.x === head.x && part.y === head.y);
+
+        if (outside || hitSelf) {
+          endGame();
+          return;
+        }
+
+        snake.unshift(head);
+        if (eating) {
+          score += 100;
+          level = Math.floor(score / 500) + 1;
+          if (score > highScore) {
+            highScore = score;
+            saveHighScore();
+          }
+          burst(food.x, food.y, PINK, 20);
+          tone(480 + level * 20, 720 + level * 30, .07, "square", .035);
+          placeFood();
+          updateHud();
+        } else {
+          snake.pop();
+        }
+      }
+
+      function burst(cellX, cellY, color, amount) {
+        const unit = canvas.width / CELLS;
+        for (let index = 0; index < amount; index += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 55 + Math.random() * 160;
+          particles.push({
+            x: (cellX + .5) * unit,
+            y: (cellY + .5) * unit,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: .35 + Math.random() * .45,
+            maxLife: .8,
+            size: 2 + Math.random() * 4,
+            color
+          });
+        }
+      }
+
+      function updateParticles(seconds) {
+        particles = particles.filter(particle => {
+          particle.life -= seconds;
+          particle.x += particle.vx * seconds;
+          particle.y += particle.vy * seconds;
+          particle.vx *= .975;
+          particle.vy *= .975;
+          return particle.life > 0;
+        });
+      }
+
+      function resizeCanvas() {
+        const width = Math.max(240, Math.floor(canvas.clientWidth * Math.min(devicePixelRatio || 1, 2)));
+        if (canvas.width !== width) canvas.width = canvas.height = width;
+      }
+
+      function roundRect(x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      }
+
+      function drawGrid(width, cell, now) {
+        ctx.lineWidth = Math.max(1, width / 900);
+        ctx.strokeStyle = "rgba(0,246,255,.075)";
+        ctx.beginPath();
+        for (let index = 0; index <= CELLS; index += 1) {
+          const point = Math.round(index * cell) + .5;
+          ctx.moveTo(point, 0); ctx.lineTo(point, width);
+          ctx.moveTo(0, point); ctx.lineTo(width, point);
+        }
+        ctx.stroke();
+
+        const scanY = (now * width * .055) % width;
+        const scan = ctx.createLinearGradient(0, scanY - cell * 2, 0, scanY + cell * 2);
+        scan.addColorStop(0, "rgba(0,246,255,0)");
+        scan.addColorStop(.5, "rgba(0,246,255,.05)");
+        scan.addColorStop(1, "rgba(0,246,255,0)");
+        ctx.fillStyle = scan;
+        ctx.fillRect(0, scanY - cell * 2, width, cell * 4);
+      }
+
+      function drawFood(cell, now) {
+        const x = (food.x + .5) * cell;
+        const y = (food.y + .5) * cell;
+        const pulse = .88 + Math.sin(now * 6) * .12;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(now * 1.8);
+        ctx.shadowColor = PINK;
+        ctx.shadowBlur = cell * .55;
+        ctx.fillStyle = PINK;
+        ctx.beginPath();
+        ctx.moveTo(0, -cell * .3 * pulse);
+        ctx.lineTo(cell * .3 * pulse, 0);
+        ctx.lineTo(0, cell * .3 * pulse);
+        ctx.lineTo(-cell * .3 * pulse, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "white";
+        ctx.fillRect(-cell * .055, -cell * .055, cell * .11, cell * .11);
+        ctx.strokeStyle = "rgba(255,43,214,.65)";
+        ctx.lineWidth = Math.max(1, cell * .045);
+        ctx.strokeRect(-cell * .42, -cell * .42, cell * .84, cell * .84);
+        ctx.restore();
+      }
+
+      function drawEyes(x, y, size, now) {
+        const fx = direction.x * size * .13;
+        const fy = direction.y * size * .13;
+        const flicker = Math.sin(now * 18) > .93 ? .25 : 1;
+        const eyes = direction.x !== 0
+          ? [{ x: .52, y: .27 }, { x: .52, y: .73 }]
+          : [{ x: .27, y: .52 }, { x: .73, y: .52 }];
+
+        ctx.fillStyle = PINK;
+        ctx.shadowColor = PINK;
+        ctx.shadowBlur = size * .22;
+        eyes.forEach(eye => ctx.fillRect(
+          x + eye.x * size - size * .06 + fx,
+          y + eye.y * size - size * .035 + fy,
+          size * .12,
+          size * .07 * flicker
+        ));
+      }
+
+      function drawSnake(cell, now) {
+        snake.forEach((part, index) => {
+          const head = index === 0;
+          const ratio = 1 - index / Math.max(1, snake.length - 1);
+          const margin = cell * (head ? .08 : .13);
+          const x = part.x * cell + margin;
+          const y = part.y * cell + margin;
+          const size = cell - margin * 2;
+
+          ctx.save();
+          ctx.shadowColor = head ? LIME : CYAN;
+          ctx.shadowBlur = head ? cell * .48 : cell * (.12 + ratio * .15);
+          if (head) {
+            const fill = ctx.createLinearGradient(x, y, x + size, y + size);
+            fill.addColorStop(0, "#efffd2");
+            fill.addColorStop(.28, LIME);
+            fill.addColorStop(1, CYAN);
+            ctx.fillStyle = fill;
+          } else {
+            ctx.fillStyle = index % 2 === 0 ? CYAN : "#18bfcf";
+          }
+          roundRect(x, y, size, size, cell * .13);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = head ? "rgba(255,255,255,.85)" : "rgba(214,255,255,.32)";
+          ctx.lineWidth = Math.max(1, cell * .035);
+          roundRect(x, y, size, size, cell * .13);
+          ctx.stroke();
+
+          if (head) drawEyes(x, y, size, now);
+          else {
+            ctx.fillStyle = `rgba(2,19,27,${.28 + (1 - ratio) * .34})`;
+            ctx.fillRect(x + size * .34, y + size * .34, size * .32, size * .32);
+          }
+          ctx.restore();
+        });
+      }
+
+      function drawParticles() {
+        particles.forEach(particle => {
+          ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+          ctx.fillStyle = particle.color;
+          ctx.shadowColor = particle.color;
+          ctx.shadowBlur = particle.size * 3;
+          ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+        });
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+
+      function draw(time) {
+        resizeCanvas();
+        const width = canvas.width;
+        const cell = width / CELLS;
+        const now = time / 1000;
+
+        ctx.save();
+        if (shake > .1) {
+          ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+          shake *= .88;
+        }
+
+        const background = ctx.createRadialGradient(width / 2, width * .45, 0, width / 2, width / 2, width * .72);
+        background.addColorStop(0, "#080a1d");
+        background.addColorStop(1, "#03040d");
+        ctx.fillStyle = background;
+        ctx.fillRect(-20, -20, width + 40, width + 40);
+        drawGrid(width, cell, now);
+        drawFood(cell, now);
+        drawSnake(cell, now);
+        drawParticles();
+
+        const vignette = ctx.createRadialGradient(width / 2, width / 2, width * .28, width / 2, width / 2, width * .72);
+        vignette.addColorStop(0, "rgba(0,0,0,0)");
+        vignette.addColorStop(1, "rgba(0,0,0,.46)");
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, width, width);
+        ctx.restore();
+      }
+
+      function initAudio() {
+        if (!soundOn) return;
+        if (!audioContext) {
+          const Audio = window.AudioContext || window.webkitAudioContext;
+          if (Audio) audioContext = new Audio();
+        }
+        if (audioContext?.state === "suspended") audioContext.resume();
+      }
+
+      function tone(from, to, duration, type, volume) {
+        if (!soundOn) return;
+        initAudio();
+        if (!audioContext) return;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const time = audioContext.currentTime;
+        osc.type = type;
+        osc.frequency.setValueAtTime(from, time);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, to), time + duration);
+        gain.gain.setValueAtTime(volume, time);
+        gain.gain.exponentialRampToValueAtTime(.0001, time + duration);
+        osc.connect(gain).connect(audioContext.destination);
+        osc.start(time);
+        osc.stop(time + duration);
+      }
+
+      function frame(time) {
+        const seconds = Math.min(.05, Math.max(0, (time - lastTime) / 1000));
+        lastTime = time;
+
+        if (state === "playing") {
+          accumulator += seconds * 1000;
+          const delay = Math.max(MIN_DELAY, BASE_DELAY - (level - 1) * 8);
+          while (accumulator >= delay && state === "playing") {
+            step();
+            accumulator -= delay;
+          }
+        }
+
+        updateParticles(seconds);
+        draw(time);
+        requestAnimationFrame(frame);
+      }
+
+      const keyMap = {
+        ArrowUp: [0, -1], KeyW: [0, -1],
+        ArrowDown: [0, 1], KeyS: [0, 1],
+        ArrowLeft: [-1, 0], KeyA: [-1, 0],
+        ArrowRight: [1, 0], KeyD: [1, 0]
+      };
+
+      addEventListener("keydown", event => {
+        if (keyMap[event.code]) {
+          event.preventDefault();
+          setDirection(...keyMap[event.code]);
+        } else if (event.code === "Space") {
+          event.preventDefault();
+          if (state === "idle" || state === "over") start();
+          else togglePause();
+        } else if (event.code === "Enter" && state !== "playing") {
+          event.preventDefault();
+          state === "paused" ? togglePause() : start();
+        }
+      });
+
+      document.querySelectorAll(".control").forEach(button => {
+        button.addEventListener("pointerdown", event => {
+          event.preventDefault();
+          const moves = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+          setDirection(...moves[button.dataset.dir]);
+        });
+      });
+
+      canvas.addEventListener("pointerdown", event => {
+        swipeStart = { x: event.clientX, y: event.clientY };
+      });
+
+      canvas.addEventListener("pointerup", event => {
+        if (!swipeStart) return;
+        const dx = event.clientX - swipeStart.x;
+        const dy = event.clientY - swipeStart.y;
+        swipeStart = null;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+        Math.abs(dx) > Math.abs(dy) ? setDirection(Math.sign(dx), 0) : setDirection(0, Math.sign(dy));
+      });
+
+      startButton.addEventListener("click", () => state === "paused" ? togglePause() : start());
+
+      soundButton.addEventListener("click", () => {
+        soundOn = !soundOn;
+        soundButton.textContent = `AUDIO // ${soundOn ? "ON" : "OFF"}`;
+        soundButton.setAttribute("aria-pressed", String(soundOn));
+        if (soundOn) tone(260, 380, .06, "square", .025);
+      });
+
+      addEventListener("blur", () => { if (state === "playing") togglePause(); });
+
+      reset();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

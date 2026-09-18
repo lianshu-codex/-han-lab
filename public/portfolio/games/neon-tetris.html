@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#060817" />
+    <meta
+      name="description"
+      content="NEON//STACK，一款赛博朋克风格、支持本地战绩记录的俄罗斯方块游戏。"
+    />
+    <title>NEON//STACK — 霓虹俄罗斯方块</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="ambient ambient--cyan" aria-hidden="true"></div>
+    <div class="ambient ambient--pink" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="NEON STACK 首页">
+          <span class="brand__mark">N<span>S</span></span>
+          <span>
+            <strong>NEON//STACK</strong>
+            <small>BLOCK PROTOCOL v2.077</small>
+          </span>
+        </a>
+
+        <div class="system-state">
+          <span class="pulse-dot"></span>
+          <span id="systemStatus">SYSTEM STANDBY</span>
+        </div>
+
+        <button id="soundButton" class="icon-button" type="button" aria-label="切换音效" aria-pressed="true">
+          <span id="soundIcon">◖))</span>
+          <small>SFX ON</small>
+        </button>
+      </header>
+
+      <main class="game-layout">
+        <aside class="side-column side-column--left">
+          <section class="hud-panel score-panel">
+            <div class="panel-heading">
+              <span>实时数据</span>
+              <small>LIVE FEED</small>
+            </div>
+            <div class="score-display">
+              <small>当前分数 / SCORE</small>
+              <strong id="score">000000</strong>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <small>消除行</small>
+                <strong id="lines">00</strong>
+              </div>
+              <div class="stat-card">
+                <small>等级</small>
+                <strong id="level">01</strong>
+              </div>
+            </div>
+            <div class="level-progress" aria-label="等级进度">
+              <div class="level-progress__meta">
+                <span>NEXT LEVEL</span>
+                <span id="levelProgressText">0 / 10</span>
+              </div>
+              <div class="level-progress__track">
+                <i id="levelProgressBar"></i>
+              </div>
+            </div>
+          </section>
+
+          <section class="hud-panel hold-panel">
+            <div class="panel-heading">
+              <span>暂存模块</span>
+              <small>HOLD · C</small>
+            </div>
+            <canvas id="holdCanvas" width="132" height="100" aria-label="暂存方块"></canvas>
+          </section>
+
+          <section class="hud-panel best-panel">
+            <div class="panel-heading">
+              <span>个人最佳</span>
+              <small>LOCAL DATA</small>
+            </div>
+            <div class="best-score">
+              <span>◈</span>
+              <strong id="bestScore">000000</strong>
+            </div>
+          </section>
+        </aside>
+
+        <section class="game-center" aria-label="俄罗斯方块游戏区">
+          <div class="board-frame">
+            <div class="frame-label frame-label--top">GRID_10×20 // SECURE CHANNEL</div>
+            <div class="frame-corner frame-corner--tl"></div>
+            <div class="frame-corner frame-corner--tr"></div>
+            <div class="frame-corner frame-corner--bl"></div>
+            <div class="frame-corner frame-corner--br"></div>
+
+            <div class="canvas-wrap">
+              <canvas id="gameCanvas" width="300" height="600" aria-label="俄罗斯方块棋盘"></canvas>
+              <div class="scanline" aria-hidden="true"></div>
+
+              <div id="gameOverlay" class="game-overlay">
+                <div class="overlay-symbol" id="overlaySymbol">⌁</div>
+                <p class="eyebrow" id="overlayEyebrow">NEURAL LINK READY</p>
+                <h1 id="overlayTitle">连接霓虹矩阵</h1>
+                <p id="overlayMessage">移动、旋转、堆叠。<br />在数据栈溢出之前刷新最高纪录。</p>
+                <div id="finalStats" class="final-stats" hidden>
+                  <div><small>SCORE</small><strong id="finalScore">0</strong></div>
+                  <div><small>LINES</small><strong id="finalLines">0</strong></div>
+                </div>
+                <button id="startButton" class="primary-button" type="button">
+                  <span>启动系统</span>
+                  <kbd>ENTER</kbd>
+                </button>
+              </div>
+
+              <div id="pauseOverlay" class="pause-overlay" hidden>
+                <span>Ⅱ</span>
+                <strong>系统暂停</strong>
+                <small>按 P / ESC 继续</small>
+              </div>
+            </div>
+            <div class="frame-label frame-label--bottom">MEM://BLOCK_MATRIX/ACTIVE</div>
+          </div>
+
+          <div class="mobile-controls" aria-label="触摸控制">
+            <button type="button" data-action="left" aria-label="左移">←</button>
+            <button type="button" data-action="rotate" aria-label="旋转">↻</button>
+            <button type="button" data-action="right" aria-label="右移">→</button>
+            <button type="button" data-action="down" aria-label="加速下降">↓</button>
+            <button type="button" data-action="drop" class="mobile-controls__drop" aria-label="直接落下">⇊</button>
+            <button type="button" data-action="hold" aria-label="暂存方块">H</button>
+          </div>
+
+          <div class="center-actions">
+            <button id="pauseButton" class="secondary-button" type="button" disabled>Ⅱ 暂停</button>
+            <button id="restartButton" class="secondary-button secondary-button--danger" type="button">↻ 重启</button>
+          </div>
+        </section>
+
+        <aside class="side-column side-column--right">
+          <section class="hud-panel next-panel">
+            <div class="panel-heading">
+              <span>后续序列</span>
+              <small>NEXT QUEUE</small>
+            </div>
+            <canvas id="nextCanvas" width="132" height="242" aria-label="后续方块"></canvas>
+          </section>
+
+          <section class="hud-panel records-panel">
+            <div class="panel-heading">
+              <span>战绩记录</span>
+              <small>TOP 5</small>
+            </div>
+            <ol id="recordList" class="record-list"></ol>
+            <button id="clearRecordsButton" class="text-button" type="button">清除记录</button>
+          </section>
+        </aside>
+      </main>
+
+      <footer class="controls-bar">
+        <div class="controls-title"><span>CTRL</span> 操作指令</div>
+        <div class="key-help"><kbd>←</kbd><kbd>→</kbd><span>移动</span></div>
+        <div class="key-help"><kbd>↑</kbd><span>旋转</span></div>
+        <div class="key-help"><kbd>↓</kbd><span>加速</span></div>
+        <div class="key-help"><kbd>SPACE</kbd><span>瞬降</span></div>
+        <div class="key-help"><kbd>C</kbd><span>暂存</span></div>
+        <div class="key-help"><kbd>P</kbd><span>暂停</span></div>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="game.js"></script>
+  </body>
+</html>

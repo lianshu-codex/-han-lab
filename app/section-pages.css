@@ -1,0 +1,6 @@
+@media (max-width: 640px) {
+  .section-page { padding-top: 44px; }
+  .section-page-intro { padding-bottom: 30px; }
+  .section-entry { grid-template-columns: 1fr; gap: 16px; }
+  .entry-meta { flex-direction: row; gap: 12px; }
+}
